@@ -743,3 +743,7 @@ nav_msgs::Path AstarPathFinder::vector3d_to_waypoints(vector<Vector3d> path)
     }
     return waypoints;
 }
+
+
+
+//gittest
