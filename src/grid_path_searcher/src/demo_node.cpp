@@ -119,14 +119,15 @@ void pathFinding(const Vector3d start_pt, const Vector3d target_pt)
 
     // auto turning_points_path = _astar_path_finder->getTurningPoints();
 
-    auto simplified_path_RDP          = _astar_path_finder->pathSimplify(grid_path, 0.05);
+    // auto simplified_path_RDP          = _astar_path_finder->pathSimplify(grid_path, 0.05);
 
-    auto simplified_points_path = _astar_path_finder->getSimplifiedPoints();//化简后的关键点
+    // auto simplified_points_path = _astar_path_finder->getSimplifiedPoints();//化简后的关键点
+    auto simplified_points_path = _astar_path_finder->getSimplifiedPoints_by_lines();//化简后的关键点,直线查找
 
-    nav_msgs::Path simplified_waypoints=_astar_path_finder->vector3d_to_waypoints(simplified_points_path);
-
-    // _simplified_waypoints_pub.publish(simplified_waypoints);
-    _simplified_waypoints_pub.publish(_astar_path_finder->vector3d_to_waypoints(simplified_path_RDP));
+    // nav_msgs::Path simplified_waypoints=_astar_path_finder->vector3d_to_waypoints(simplified_points_path);
+    nav_msgs::Path simplified_waypoints=_astar_path_finder->vector3d_to_waypoints(grid_path);
+    _simplified_waypoints_pub.publish(simplified_waypoints);
+    // _simplified_waypoints_pub.publish(_astar_path_finder->vector3d_to_waypoints(simplified_path_RDP));
 
     ros::Time time_2 = ros::Time::now();
     ROS_WARN("Total time cost is %f ms", (time_2 - time_1).toSec() * 1000.0);
@@ -134,8 +135,8 @@ void pathFinding(const Vector3d start_pt, const Vector3d target_pt)
     //Visualize the result
     visGridPath (grid_path, false);
     // visVisitedNode(visited_nodes);
-    // visVisitedNode(simplified_points_path);
-    visVisitedNode(simplified_path_RDP);
+    visVisitedNode(simplified_points_path);
+    // visVisitedNode(simplified_path_RDP);
 
     //Reset map for next call
     _astar_path_finder->resetUsedGrids();

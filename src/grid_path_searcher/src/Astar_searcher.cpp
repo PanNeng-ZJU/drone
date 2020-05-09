@@ -746,4 +746,94 @@ nav_msgs::Path AstarPathFinder::vector3d_to_waypoints(vector<Vector3d> path)
 
 
 
-//gittest
+//输入A星得到的路径点，输出简化后的关键点
+vector<Vector3d> AstarPathFinder::getSimplifiedPoints_by_lines()
+{
+    vector<Vector3d> path;
+    vector<GridNodePtr> gridPath;
+
+    GridNodePtr currentPtr=terminatePtr;//从终点开始往前找
+
+    // GridNodePtr nextPtr=terminatePtr;//current的下一个节点（终点方向）(常规意义上的上一个节点)   
+    //在这个函数里没啥用，不过还是维护了
+
+    GridNodePtr lastPtr;//current的上一个节点（起点方向）（常规意义上的下一个节点）
+
+    GridNodePtr lastTurningPtr=terminatePtr;//上一个关键点
+
+    gridPath.push_back(lastTurningPtr);//终点肯定是关键点/
+
+    double last_K_xy=0;
+    double current_K_xy=0;
+    double last_K_yz=0;
+    double current_K_yz=0;
+
+    double my_inf=9999;
+    bool K_init_flag=1;
+
+    while(currentPtr->cameFrom!=NULL)
+    {
+        lastPtr=currentPtr->cameFrom;   
+
+        int  x1 = lastTurningPtr->index(0);
+        int  y1 = lastTurningPtr->index(1);
+        int  z1 = lastTurningPtr->index(2);
+        int  x2 = lastPtr->index(0);
+        int  y2 = lastPtr->index(1);
+        int  z2 = lastPtr->index(2);
+
+        if(x2==x1)
+        {
+            current_K_xy=my_inf;
+        }
+        else
+        {
+            current_K_xy=(double)(y2-y1)/(x2-x1);
+        }
+
+        if(z2==z1)
+        {
+            current_K_yz=my_inf;
+        }
+        else
+        {
+            current_K_yz=(double)(y2-y1)/(z2-z1);
+        }
+
+        if(K_init_flag)
+        {
+            last_K_xy=current_K_xy;
+            last_K_yz=current_K_yz;
+            K_init_flag=0;
+        }        
+
+        // ROS_INFO("x1=%d  x2=%d  y1=%d  y2=%d  current_K=%f   last_K=%f",x1,x2,y1,y2,current_K,last_K);
+
+        if(current_K_xy!=last_K_xy||current_K_yz!=last_K_yz)
+        {
+            lastTurningPtr=currentPtr;
+            gridPath.push_back(lastTurningPtr);//终点肯定是关键点/
+            K_init_flag=1;
+            continue;
+        }
+        else
+        {
+            // nextPtr=currentPtr;//更新next
+            currentPtr=lastPtr;//更新current
+        }
+    }
+    gridPath.push_back(currentPtr);
+    
+    nav_msgs::Path waypoints;
+    geometry_msgs::PoseStamped pt;
+
+    for (auto ptr: gridPath)
+    {
+        path.push_back(ptr->coord);//维护path
+        ROS_INFO("coord_x=%f   y=%f   z=%f",ptr->coord(0),ptr->coord(1),ptr->coord(2));
+    }
+        
+    reverse(path.begin(),path.end());//这步在可视化上没有区别
+    return path;
+
+}
