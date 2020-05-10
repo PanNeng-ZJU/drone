@@ -71,7 +71,7 @@ void AstarPathFinder::setObs(const double coord_x, const double coord_y, const d
     int idx_y = int( (coord_y - gl_yl) * inv_resolution);
     int idx_z = int( (coord_z - gl_zl) * inv_resolution);
 
-    double expand_ratio=1;
+    double expand_ratio=0.5;
 
     double default_resolution=0.2;
     int expand_size=(int)(expand_ratio*(double)(default_resolution/resolution));//膨胀栅格数，0时不膨胀，1够用
@@ -746,7 +746,7 @@ nav_msgs::Path AstarPathFinder::vector3d_to_waypoints(vector<Vector3d> path)
 
 
 
-//输入A星得到的路径点，输出简化后的关键点
+//输入A星得到的路径点，输出简化后的关键点,通过找拐点的形式
 vector<Vector3d> AstarPathFinder::getSimplifiedPoints_by_lines()
 {
     vector<Vector3d> path;
@@ -770,6 +770,13 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints_by_lines()
 
     double my_inf=9999;
     bool K_init_flag=1;
+    int line_point_count=0;
+
+    double default_resolution=0.2;
+    int point_gap_max=3*(int)(default_resolution/resolution);//关键点间最大间隔数
+    // int point_gap_max=4;
+    // ROS_INFO("point_gap_max=%d   resolution=%f",point_gap_max,resolution);
+
 
     while(currentPtr->cameFrom!=NULL)
     {
@@ -800,7 +807,7 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints_by_lines()
             current_K_yz=(double)(y2-y1)/(z2-z1);
         }
 
-        if(K_init_flag)
+        if(K_init_flag)//斜率的初始化
         {
             last_K_xy=current_K_xy;
             last_K_yz=current_K_yz;
@@ -809,15 +816,35 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints_by_lines()
 
         // ROS_INFO("x1=%d  x2=%d  y1=%d  y2=%d  current_K=%f   last_K=%f",x1,x2,y1,y2,current_K,last_K);
 
-        if(current_K_xy!=last_K_xy||current_K_yz!=last_K_yz)
+        if(current_K_xy!=last_K_xy||current_K_yz!=last_K_yz)//斜率不同时，说明当前点的上一个点（即还没更新的current）是拐点
         {
+            if(line_point_count>point_gap_max)//如果直线太长，等分成若干份
+            {
+                int divide_num=(int)line_point_count/point_gap_max+1;
+                int gap=(int)line_point_count/divide_num;
+                int temp_count=0;
+                GridNodePtr tempPtr=lastTurningPtr;
+                while(tempPtr!=currentPtr)
+                {
+                    temp_count++;
+                    if(temp_count%gap==0)
+                        gridPath.push_back(tempPtr);
+                    tempPtr=tempPtr->cameFrom;
+                }
+            }
+            
+
+
+            // ROS_INFO("line_point_count=%d",line_point_count);
+            line_point_count=0;
             lastTurningPtr=currentPtr;
-            gridPath.push_back(lastTurningPtr);//终点肯定是关键点/
+            gridPath.push_back(lastTurningPtr);
             K_init_flag=1;
             continue;
         }
         else
         {
+            line_point_count++;
             // nextPtr=currentPtr;//更新next
             currentPtr=lastPtr;//更新current
         }
@@ -830,7 +857,7 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints_by_lines()
     for (auto ptr: gridPath)
     {
         path.push_back(ptr->coord);//维护path
-        ROS_INFO("coord_x=%f   y=%f   z=%f",ptr->coord(0),ptr->coord(1),ptr->coord(2));
+        // ROS_INFO("coord_x=%f   y=%f   z=%f",ptr->coord(0),ptr->coord(1),ptr->coord(2));
     }
         
     reverse(path.begin(),path.end());//这步在可视化上没有区别
