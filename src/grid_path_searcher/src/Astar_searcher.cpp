@@ -606,11 +606,14 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
 
     gridPath.push_back(lastTurningPtr);//终点肯定是关键点
 
+    int line_point_count=0;
+    int temp_count=0;
     while(currentPtr->cameFrom!=NULL)
     {
         GridNodePtr maxPtr=currentPtr->cameFrom;//初始化最远无碰节点
         while(currentPtr->cameFrom!=NULL)
         {
+            temp_count++;
             lastPtr=currentPtr->cameFrom;   
 
             int  x1 = lastTurningPtr->index(0);
@@ -635,23 +638,39 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
             }
             if(collision_flag==0)
             {
-                // ROS_INFO("collision!");
-                //解决死循环
-                // if(lastTurningPtr==currentPtr)
-                //     {
-                //         ROS_WARN("dead loop occurs!!!");
-                //         nextPtr=currentPtr;
-                //         currentPtr=lastPtr;
-                //         continue;
-                //     }
                 maxPtr=lastPtr;//若无碰，更新最大无碰节点
+                line_point_count=temp_count;
             }
 
             // nextPtr=currentPtr;//更新next
             currentPtr=lastPtr;//更新current
 
         }
+
+
+        double default_resolution=0.2;
+        int point_gap_max=3*(int)(default_resolution/resolution);//关键点间最大间隔数
+
+        if(line_point_count>point_gap_max)//如果直线太长，等分成若干份
+            {
+                int divide_num=(int)line_point_count/point_gap_max+1;
+                int gap=(int)line_point_count/divide_num;
+                int temp_count=0;
+                GridNodePtr tempPtr=lastTurningPtr;
+                while(tempPtr!=maxPtr)
+                {
+                    temp_count++;
+                    if(temp_count%gap==0)
+                        gridPath.push_back(tempPtr);
+                    tempPtr=tempPtr->cameFrom;
+                }
+            }
+
+    
+
         lastTurningPtr=maxPtr;//更新最新的关键点
+        temp_count=0;
+        line_point_count=0;
         gridPath.push_back(lastTurningPtr);//储存关键点
         currentPtr=maxPtr;//更新current
 

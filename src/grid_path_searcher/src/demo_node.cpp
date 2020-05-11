@@ -119,10 +119,9 @@ void pathFinding(const Vector3d start_pt, const Vector3d target_pt)
 
     // auto turning_points_path = _astar_path_finder->getTurningPoints();
 
-    // auto simplified_path_RDP          = _astar_path_finder->pathSimplify(grid_path, 0.05);
-
-    // auto simplified_points_path = _astar_path_finder->getSimplifiedPoints();//化简后的关键点
-    auto simplified_points_path = _astar_path_finder->getSimplifiedPoints_by_lines();//化简后的关键点,直线查找
+    // auto simplified_points_path          = _astar_path_finder->pathSimplify(grid_path, 0.05);//RDP算法化简
+    auto simplified_points_path = _astar_path_finder->getSimplifiedPoints();//化简后的关键点
+    // auto simplified_points_path = _astar_path_finder->getSimplifiedPoints_by_lines();//化简后的关键点,直线查找
 
     nav_msgs::Path simplified_waypoints=_astar_path_finder->vector3d_to_waypoints(simplified_points_path);
     // nav_msgs::Path simplified_waypoints=_astar_path_finder->vector3d_to_waypoints(grid_path);
