@@ -38,8 +38,8 @@ vector<float>   pointSquaredDistance;
 void RandomMapGenerate()
 {  
    random_device rd;
-   // default_random_engine eng(rd());
-   default_random_engine eng(1);
+   default_random_engine eng(rd());
+   // default_random_engine eng(1);
    
    uniform_real_distribution<double> rand_x = uniform_real_distribution<double>(_x_l, _x_h );
    uniform_real_distribution<double> rand_y = uniform_real_distribution<double>(_y_l, _y_h );
@@ -134,6 +134,9 @@ void RandomMapGenerate()
       x    = rand_x(eng);
       y    = rand_y(eng);
       w    = rand_w(eng);
+      // x=0;
+      // y=0;
+      // w=2;
 
       //if(sqrt( pow(x - _init_x, 2) + pow(y - _init_y, 2) ) < 2.0 ) 
       if(sqrt( pow(x - _init_x, 2) + pow(y - _init_y, 2) ) < 0.8 ) 
@@ -206,6 +209,8 @@ int main (int argc, char** argv)
    n.param("map/obs_num",    _obs_num,  30);
    n.param("map/circle_num", _cir_num,  30);
    n.param("map/resolution", _resolution, 0.2);
+
+   // ROS_INFO("resolution=%f",_resolution);
 
    n.param("ObstacleShape/lower_rad", _w_l,   0.3);
    n.param("ObstacleShape/upper_rad", _w_h,   0.8);

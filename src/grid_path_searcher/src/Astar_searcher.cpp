@@ -1,9 +1,16 @@
 #include "Astar_searcher.h"
 #include <math.h>
 #include <nav_msgs/Path.h>
+#include <visualization_msgs/Marker.h>
 #include <utility>
+//#include <waypoint_trajectory_generator/Trajectoy.h>
+//#include <waypoint_trajectory_generator/trajpoint.h>
+
+
 using namespace std;
 using namespace Eigen;
+
+void TrajectoryCallBack(const visualization_msgs::Marker  & trajectory);
 
 void AstarPathFinder::initGridMap(double _resolution, Vector3d global_xyz_l, Vector3d global_xyz_u, int max_x_id, int max_y_id, int max_z_id)
 {   
@@ -76,12 +83,24 @@ void AstarPathFinder::setObs(const double coord_x, const double coord_y, const d
     double default_resolution=0.2;
     int expand_size=(int)(expand_ratio*(double)(default_resolution/resolution));//膨胀栅格数，0时不膨胀，1够用
     if(expand_size<=0)
-        expand_size=1;
+        expand_size=0;
+    
+    // expand_size=expand_size+1;
+    
+    // expand_size=0;
+
+    // if(idx_z==1)
+        // ROS_INFO("obs x=%d y=%d  z=%d",idx_x,idx_y,idx_z);
 
     for (int i=-expand_size;i<=expand_size;i++)
         for (int j=-expand_size;j<=expand_size;j++)
             for (int k=-expand_size;k<=expand_size;k++)
             {
+                // if(abs(i)+abs(j)+abs(k)==3*expand_size)//膨胀成十字形，而不是方块
+                // {
+                //     // ROS_INFO("i=%d  j=%d  k=%d   ",i,j,k);
+                //     continue;
+                // }
                 int temp_x=idx_x+i;
                 int temp_y=idx_y+j;
                 int temp_z=idx_z+k;
@@ -97,7 +116,7 @@ void AstarPathFinder::setObs(const double coord_x, const double coord_y, const d
                 data[temp_x * GLYZ_SIZE + temp_y * GLZ_SIZE + temp_z] = 1;//index(grid)
             }
     
-
+    
     //高分辨率地图的创建
     double high_resolution=resolution/resolution_ratio;//分辨率
     double high_inv_resolution=1/high_resolution;//反分辨率
@@ -107,8 +126,20 @@ void AstarPathFinder::setObs(const double coord_x, const double coord_y, const d
     idx_y = int( (coord_y - gl_yl) * high_inv_resolution);
     idx_z = int( (coord_z - gl_zl) * high_inv_resolution);
     
-    int high_expand_size=(int)(expand_ratio*(double)(default_resolution/high_resolution));//膨胀单位
-    // ROS_WARN("expand_size=%d    high_expand_size=%d  ",expand_size,high_expand_size);
+    // double expand_scale_ratio=2;//高分辨率地图中，障碍物膨胀稍微小点//事实证明不能小。。。小了会撞
+    // double expand_ratio_high=1;
+
+    // int high_expand_size=(int)(expand_ratio*expand_scale_ratio*(double)(default_resolution/high_resolution));//膨胀单位
+    // int high_expand_size=(int)expand_size*(2*resolution/high_resolution-1);
+
+    int high_expand_size=expand_size-1;
+
+    static int cout_flag=1;
+    if(cout_flag)
+    {
+        ROS_WARN("expand_size=%d    high_expand_size=%d  ",expand_size,high_expand_size);
+        cout_flag=0;
+    }
     for (int i=-high_expand_size;i<=high_expand_size;i++)
         for (int j=-high_expand_size;j<=high_expand_size;j++)
             for (int k=-high_expand_size;k<=high_expand_size;k++)
@@ -590,7 +621,7 @@ vector<Vector3d> AstarPathFinder::getTurningPoints()
 
 
 //输入A星得到的路径点，输出简化后的关键点
-vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
+vector<Vector3d> AstarPathFinder::getSimplifiedPoints(int max_gap)
 {
     vector<Vector3d> path;
     vector<GridNodePtr> gridPath;
@@ -623,18 +654,38 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
             int  y2 = lastPtr->index(1);
             int  z2 = lastPtr->index(2);
 
+            // if(if_collision(x1*resolution_ratio,y1*resolution_ratio,z1*resolution_ratio))
+            //     ROS_WARN("key node collision???????????????????????????????");
+
             int collision_flag=0;//碰撞标志位
 
-            double divide_piece_num=20;//碰撞检测划分份数
+            // double divide_piece_num=40;//碰撞检测划分份数
+            
+            double d=sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2)+(z1-z2)*(z1-z2));
+
+            // double divide_piece_num=d*2;//碰撞检测划分份数
+            double divide_piece_num=100;
+            // ROS_INFO("d=%f         step=%f ",d,1.0/divide_piece_num);
             for (double k=0;k<1;k+=1.0/divide_piece_num)
             {
-                //得到等分点坐标
-                int x_check=int(x1*resolution_ratio+(double)k*(x2-x1)*resolution_ratio);
-                int y_check=int(y1*resolution_ratio+(double)k*(y2-y1)*resolution_ratio);
-                int z_check=int(z1*resolution_ratio+(double)k*(z2-z1)*resolution_ratio);
-                // ROS_INFO("check_x=%d   y=%d   z=%d",x_check,y_check,z_check);
-                if(if_collision(x_check,y_check,z_check))
-                    collision_flag=1;
+                // //得到等分点坐标
+                // int x_check=int(x1*resolution_ratio+(double)k*(x2-x1)*resolution_ratio);
+                // int y_check=int(y1*resolution_ratio+(double)k*(y2-y1)*resolution_ratio);
+                // int z_check=int(z1*resolution_ratio+(double)k*(z2-z1)*resolution_ratio);
+                // // ROS_INFO("check_x=%d   y=%d   z=%d",x_check,y_check,z_check);
+                // if(if_collision(x_check,y_check,z_check))
+                //     collision_flag=1;
+
+                 //得到等分点坐标    原始地图
+                int x_check=int(x1+(double)k*(x2-x1));
+                int y_check=int(y1+(double)k*(y2-y1));
+                int z_check=int(z1+(double)k*(z2-z1));
+
+                if(isOccupied(x_check,y_check,z_check))
+                    {
+                        collision_flag=1;
+                        // ROS_INFO("check_x=%d   y=%d   z=%d    x1=%d  y1=%d  x2=%d  y2=%d",x_check,y_check,z_check,x1,y1,x2,y2);
+                    }
             }
             if(collision_flag==0)
             {
@@ -644,12 +695,10 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
 
             // nextPtr=currentPtr;//更新next
             currentPtr=lastPtr;//更新current
-
         }
 
-
         double default_resolution=0.2;
-        int point_gap_max=3*(int)(default_resolution/resolution);//关键点间最大间隔数
+        int point_gap_max=max_gap*(int)(default_resolution/resolution);//关键点间最大间隔数
 
         if(line_point_count>point_gap_max)//如果直线太长，等分成若干份
             {
@@ -658,8 +707,6 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
                 int temp_count=0;
                 // GridNodePtr tempPtr=lastTurningPtr;
                 
-
-
                 int  x_last = lastTurningPtr->index(0);
                 int  y_last = lastTurningPtr->index(1);
                 int  z_last = lastTurningPtr->index(2);
@@ -667,7 +714,7 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
                 int  y_current = maxPtr->index(1);
                 int  z_current = maxPtr->index(2);
 
-                for (int i=0;i<divide_num;i++)
+                for (int i=1;i<divide_num;i++)//i从1开始避免重点
                 {
                     Vector3i temp_idx;
                     temp_idx(0)=(int)(x_last+(double)(x_current-x_last)*(double)i/divide_num);
@@ -677,18 +724,7 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
                      GridNodePtr pushPtr = new GridNode(temp_idx, gridIndex2coord(temp_idx));
                      gridPath.push_back(pushPtr);
                 }
-
-
-                // while(tempPtr!=maxPtr)
-                // {
-                //     temp_count++;
-                //     if(temp_count%gap==0)
-                //         gridPath.push_back(tempPtr);
-                //     tempPtr=tempPtr->cameFrom;
-                // }
-            }
-
-    
+            }    
 
         lastTurningPtr=maxPtr;//更新最新的关键点
         temp_count=0;
@@ -707,17 +743,11 @@ vector<Vector3d> AstarPathFinder::getSimplifiedPoints()
     {
         path.push_back(ptr->coord);//维护path
         ROS_INFO("coord_x=%f   y=%f   z=%f",ptr->coord(0),ptr->coord(1),ptr->coord(2));
-        // pt.pose.position.y =  ptr->coord(1);
-        // pt.pose.position.x =  ptr->coord(0);
-        // pt.pose.position.z =  ptr->coord(2);
-        // waypoints.poses.push_back(pt);//维护waypoints
     }
         
     reverse(path.begin(),path.end());//这步在可视化上没有区别
-    // reverse(waypoints.poses.begin(),waypoints.poses.end());
-    // pair<vector<Vector3d>,nav_msgs::Path> p;
-    // p=make_pair(path,waypoints);
-    // return p;//返回path和waypoints
+
+    //1.得到了第一次的关键点path
     return path;
 
 }

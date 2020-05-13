@@ -4,7 +4,7 @@
 <arg name="map_size_y" default="10.0"/>
 <arg name="map_size_z" default=" 2.0"/>
 
-<arg name="start_x" default=" 0.0"/>
+<arg name="start_x" default=" 2.0"/>
 <arg name="start_y" default=" 0.0"/>
 <arg name="start_z" default=" 1.0"/>
 
@@ -14,6 +14,23 @@
   </node>
 
   <node pkg="grid_path_searcher" type="demo_node" name="demo_node" output="screen" required = "true">
+      <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
+      <remap from="~map"             to="/random_complex/global_map"/> 
+
+      <param name="map/margin"       value="0.0" />
+      <param name="map/resolution"   value="0.1" />
+      <param name="map/x_size"       value="$(arg map_size_x)"/>
+      <param name="map/y_size"       value="$(arg map_size_y)"/>
+      <param name="map/z_size"       value="$(arg map_size_z)"/>
+
+      <param name="planning/start_x" value="$(arg start_x)"/>
+      <param name="planning/start_y" value="$(arg start_y)"/>
+      <param name="planning/start_z" value="$(arg start_z)"/>
+  </node>
+
+
+
+  <node pkg="drone_node" type="drone_node" name="drone_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
       <remap from="~map"             to="/random_complex/global_map"/> 
 
@@ -38,7 +55,7 @@
       <param name="map/z_size"     value="$(arg map_size_z)" />
 
       <param name="map/circle_num" value="0"/>        
-      <param name="map/obs_num"    value="100"/>        
+      <param name="map/obs_num"    value="80"/>        
       <param name="map/resolution" value="0.1"/>        
 
       <param name="ObstacleShape/lower_rad" value="0.1"/>
@@ -63,11 +80,12 @@
       <remap from="~odom"      to="/msckf_vio/odometry"/>
       <remap from="~joy"      to="/djiros/rc"/>
       
-      <param name="planning/vel"       value="1"  />
-      <param name="planning/acc"       value="1"  />
-      <param name="planning/dev_order" value="3"    />
+      <param name="planning/vel"       value="5"  />
+      <param name="planning/acc"       value="5"  />
+      <param name="planning/dev_order" value="4"    />
       <param name="planning/min_order" value="3"    />
       <param name="vis/vis_traj_width" value="0.05" />
+      <!-- <param name="map/resolution"   value="0.2" /> -->
 
   </node>
   

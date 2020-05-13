@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(grid_path_searcher)
+project(drone_node)
 
 find_package(catkin REQUIRED COMPONENTS 
     roscpp 
@@ -15,9 +15,6 @@ find_package(PCL REQUIRED)
 
 set(Eigen3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
 
-catkin_package(
-  INCLUDE_DIRS include
-)
 
 include_directories(
     include 
@@ -28,23 +25,19 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
 )
 
+catkin_package(
+  INCLUDE_DIRS include
+)
+
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -O3 -Wall") # -Wextra -Werror
 
-add_executable( demo_node 
-    src/demo_node.cpp
-    src/Astar_searcher.cpp
-    src/read_only/JPS_utils.cpp
-    src/read_only/JPS_searcher.cpp
+add_executable( drone_node 
+	src/drone_node.cpp
+
     )
 
-target_link_libraries(demo_node 
+target_link_libraries(drone_node
     ${catkin_LIBRARIES}
     ${PCL_LIBRARIES} 
 )
 
-add_executable ( random_complex 
-    src/random_complex_generator.cpp )
-
-target_link_libraries( random_complex
-    ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES} )  
